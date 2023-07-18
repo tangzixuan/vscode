@@ -369,7 +369,7 @@ export class ChatWidget extends Disposable implements IChatWidget {
 			this.viewModel = undefined;
 			this.onDidChangeItems();
 		}));
-		this.inputPart.setState(model.providerId, viewState.inputValue ?? '');
+		this.inputPart.setState(model.providerId, viewState.inputValue ?? (model.chatEditorInput ?? ''));
 
 		if (this.tree) {
 			this.onDidChangeItems();
@@ -471,6 +471,7 @@ export class ChatWidget extends Disposable implements IChatWidget {
 	}
 
 	saveState(): void {
+		this.viewModel?.setChatEditorInput(this.inputPart.inputEditor.getValue());
 		this.inputPart.saveState();
 	}
 

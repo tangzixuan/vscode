@@ -197,6 +197,7 @@ export interface IChatModel {
 	getRequests(): IChatRequestModel[];
 	toExport(): IExportableChatData;
 	toJSON(): ISerializableChatData;
+	chatEditorInput: string;
 }
 
 export interface ISerializableChatsData {
@@ -216,6 +217,7 @@ export interface ISerializableChatRequestData {
 export interface IExportableChatData {
 	providerId: string;
 	welcomeMessage: (string | IChatReplyFollowup[])[] | undefined;
+	chatEditorInput: string | undefined;
 	requests: ISerializableChatRequestData[];
 	requesterUsername: string;
 	responderUsername: string;
@@ -268,6 +270,7 @@ export interface IChatInitEvent {
 }
 
 export class ChatModel extends Disposable implements IChatModel {
+	public chatEditorInput: string = '';
 	private readonly _onDidDispose = this._register(new Emitter<void>());
 	readonly onDidDispose = this._onDidDispose.event;
 
@@ -358,7 +361,7 @@ export class ChatModel extends Disposable implements IChatModel {
 		this._requests = initialData ? this._deserialize(initialData) : [];
 		this._providerState = initialData ? initialData.providerState : undefined;
 		this._creationDate = (isSerializableSessionData(initialData) && initialData.creationDate) || Date.now();
-
+		this.chatEditorInput = initialData?.chatEditorInput ?? '';
 		this._initialRequesterAvatarIconUri = initialData?.requesterAvatarIconUri && URI.revive(initialData.requesterAvatarIconUri);
 		this._initialResponderAvatarIconUri = initialData?.responderAvatarIconUri && URI.revive(initialData.responderAvatarIconUri);
 	}
@@ -373,6 +376,10 @@ export class ChatModel extends Disposable implements IChatModel {
 		if (obj.welcomeMessage) {
 			const content = obj.welcomeMessage.map(item => typeof item === 'string' ? new MarkdownString(item) : item);
 			this._welcomeMessage = new ChatWelcomeMessageModel(content, obj.responderUsername, obj.responderAvatarIconUri && URI.revive(obj.responderAvatarIconUri));
+		}
+
+		if (obj.chatEditorInput) {
+			this.chatEditorInput = obj.chatEditorInput;
 		}
 
 		return requests.map((raw: ISerializableChatRequestData) => {
@@ -526,6 +533,7 @@ export class ChatModel extends Disposable implements IChatModel {
 					return c.value;
 				}
 			}),
+			chatEditorInput: this.chatEditorInput,
 			requests: this._requests.map((r): ISerializableChatRequestData => {
 				return {
 					providerRequestId: r.providerRequestId,

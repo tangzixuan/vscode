@@ -179,6 +179,10 @@ export class ChatViewModel extends Disposable implements IChatViewModel {
 			.filter((item): item is ChatResponseViewModel => item instanceof ChatResponseViewModel)
 			.forEach((item: ChatResponseViewModel) => item.dispose());
 	}
+
+	setChatEditorInput(input: string) {
+		this._model.chatEditorInput = input;
+	}
 }
 
 export class ChatRequestViewModel implements IChatRequestViewModel {
