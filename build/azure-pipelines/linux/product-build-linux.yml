@@ -94,6 +94,12 @@ steps:
       displayName: Install Docker client
       condition: and(succeeded(), ne(variables.NODE_MODULES_RESTORED, 'true'))
 
+  # TODO@chrmarti this should be part of the base image?
+  - script: |
+      sudo apt-get update && sudo apt-get install -y libkrb5-dev
+    displayName: Install libkrb5-dev
+    condition: and(succeeded(), ne(variables.NODE_MODULES_RESTORED, 'true'))
+
   - ${{ if and(ne(parameters.VSCODE_QUALITY, 'oss'), or(eq(parameters.VSCODE_ARCH, 'x64'), eq(parameters.VSCODE_ARCH, 'arm64'))) }}:
     - task: Docker@1
       displayName: "Pull Docker image"
