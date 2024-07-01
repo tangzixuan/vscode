@@ -32,6 +32,12 @@ export class GitHistoryProvider implements SourceControlHistoryProvider, FileDec
 	}
 
 	private historyItemDecorations = new Map<string, FileDecoration>();
+	private historyItemLabels = new Map<string, string>([
+		['HEAD -> refs/heads/', 'target'],
+		['refs/heads/', 'git-branch'],
+		['refs/remotes/', 'cloud'],
+		['refs/tags/', 'tag']
+	]);
 
 	private disposables: Disposable[] = [];
 
@@ -250,11 +256,7 @@ export class GitHistoryProvider implements SourceControlHistoryProvider, FileDec
 			return undefined;
 		}
 
-		let refsMergeBase = refNames[0];
-		for (let index = 1; index < refNames.length; index++) {
-			refsMergeBase = await this.repository.getMergeBase(refsMergeBase, refNames[index]) ?? refsMergeBase;
-		}
-
+		const refsMergeBase = await this.repository.getMergeBase(refNames[0], refNames[1], ...refNames.slice(2));
 		return refsMergeBase;
 	}
 
@@ -262,35 +264,18 @@ export class GitHistoryProvider implements SourceControlHistoryProvider, FileDec
 		const labels: SourceControlHistoryItemLabel[] = [];
 
 		for (const label of commit.refNames) {
-			if (label.startsWith('HEAD -> ')) {
-				labels.push(
-					{
-						title: label.substring(19),
-						icon: new ThemeIcon('git-branch')
-					}
-				);
+			if (!label.startsWith('HEAD -> ') && !refNames.includes(label)) {
 				continue;
 			}
 
-			if (!refNames.includes(label)) {
-				continue;
-			}
-
-			if (label.startsWith('refs/tags/')) {
-				labels.push({
-					title: label.substring(10),
-					icon: new ThemeIcon('tag')
-				});
-			} else if (label.startsWith('refs/remotes/')) {
-				labels.push({
-					title: label.substring(13),
-					icon: new ThemeIcon('cloud')
-				});
-			} else {
-				labels.push({
-					title: label.substring(11),
-					icon: new ThemeIcon('git-branch')
-				});
+			for (const [key, value] of this.historyItemLabels) {
+				if (label.startsWith(key)) {
+					labels.push({
+						title: label.substring(key.length),
+						icon: new ThemeIcon(value)
+					});
+					break;
+				}
 			}
 		}
 

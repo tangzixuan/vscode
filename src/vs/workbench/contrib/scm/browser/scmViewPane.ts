@@ -23,7 +23,7 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { MenuItemAction, IMenuService, registerAction2, MenuId, IAction2Options, MenuRegistry, Action2, IMenu } from 'vs/platform/actions/common/actions';
 import { IAction, ActionRunner, Action, Separator, IActionRunner } from 'vs/base/common/actions';
 import { ActionBar, IActionViewItemProvider } from 'vs/base/browser/ui/actionbar/actionbar';
-import { IThemeService, IFileIconTheme } from 'vs/platform/theme/common/themeService';
+import { IThemeService, IFileIconTheme, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { isSCMResource, isSCMResourceGroup, connectPrimaryMenuToInlineActionBar, isSCMRepository, isSCMInput, collectContextMenuActions, getActionViewItemProvider, isSCMActionButton, isSCMViewService, isSCMHistoryItemGroupTreeElement, isSCMHistoryItemTreeElement, isSCMHistoryItemChangeTreeElement, toDiffEditorArguments, isSCMResourceNode, isSCMHistoryItemChangeNode, isSCMViewSeparator, connectPrimaryMenu, isSCMHistoryItemViewModelTreeElement } from './util';
 import { WorkbenchCompressibleAsyncDataTree, IOpenEvent } from 'vs/platform/list/browser/listService';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
@@ -37,11 +37,10 @@ import { URI } from 'vs/base/common/uri';
 import { FileKind } from 'vs/platform/files/common/files';
 import { compareFileNames, comparePaths } from 'vs/base/common/comparers';
 import { FuzzyScore, createMatches, IMatch } from 'vs/base/common/filters';
-import { IViewDescriptorService, ViewContainerLocation } from 'vs/workbench/common/views';
+import { IViewDescriptorService } from 'vs/workbench/common/views';
 import { localize } from 'vs/nls';
 import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { EditorResourceAccessor, SideBySideEditor } from 'vs/workbench/common/editor';
-import { SIDE_BAR_BACKGROUND, PANEL_BACKGROUND } from 'vs/workbench/common/theme';
 import { CodeEditorWidget, ICodeEditorWidgetOptions } from 'vs/editor/browser/widget/codeEditor/codeEditorWidget';
 import { IEditorConstructionOptions } from 'vs/editor/browser/config/editorConfiguration';
 import { getSimpleEditorOptions } from 'vs/workbench/contrib/codeEditor/browser/simpleEditorOptions';
@@ -96,7 +95,7 @@ import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity'
 import { EditOperation } from 'vs/editor/common/core/editOperation';
 import { stripIcons } from 'vs/base/common/iconLabels';
 import { IconLabel } from 'vs/base/browser/ui/iconLabel/iconLabel';
-import { foreground, listActiveSelectionForeground, registerColor, transparent } from 'vs/platform/theme/common/colorRegistry';
+import { editorSelectionBackground, foreground, inputBackground, inputForeground, listActiveSelectionForeground, registerColor, selectionBackground, transparent } from 'vs/platform/theme/common/colorRegistry';
 import { IMenuWorkbenchToolBarOptions, MenuWorkbenchToolBar, WorkbenchToolBar } from 'vs/platform/actions/browser/toolbar';
 import { CancellationTokenSource } from 'vs/base/common/cancellation';
 import { DropdownWithPrimaryActionViewItem } from 'vs/platform/actions/browser/dropdownWithPrimaryActionViewItem';
@@ -130,33 +129,13 @@ type TreeElement =
 
 type ShowChangesSetting = 'always' | 'never' | 'auto';
 
-registerColor('scm.historyItemAdditionsForeground', {
-	dark: 'gitDecoration.addedResourceForeground',
-	light: 'gitDecoration.addedResourceForeground',
-	hcDark: 'gitDecoration.addedResourceForeground',
-	hcLight: 'gitDecoration.addedResourceForeground'
-}, localize('scm.historyItemAdditionsForeground', "History item additions foreground color."));
+registerColor('scm.historyItemAdditionsForeground', 'gitDecoration.addedResourceForeground', localize('scm.historyItemAdditionsForeground', "History item additions foreground color."));
 
-registerColor('scm.historyItemDeletionsForeground', {
-	dark: 'gitDecoration.deletedResourceForeground',
-	light: 'gitDecoration.deletedResourceForeground',
-	hcDark: 'gitDecoration.deletedResourceForeground',
-	hcLight: 'gitDecoration.deletedResourceForeground'
-}, localize('scm.historyItemDeletionsForeground', "History item deletions foreground color."));
+registerColor('scm.historyItemDeletionsForeground', 'gitDecoration.deletedResourceForeground', localize('scm.historyItemDeletionsForeground', "History item deletions foreground color."));
 
-registerColor('scm.historyItemStatisticsBorder', {
-	dark: transparent(foreground, 0.2),
-	light: transparent(foreground, 0.2),
-	hcDark: transparent(foreground, 0.2),
-	hcLight: transparent(foreground, 0.2)
-}, localize('scm.historyItemStatisticsBorder', "History item statistics border color."));
+registerColor('scm.historyItemStatisticsBorder', transparent(foreground, 0.2), localize('scm.historyItemStatisticsBorder', "History item statistics border color."));
 
-registerColor('scm.historyItemSelectedStatisticsBorder', {
-	dark: transparent(listActiveSelectionForeground, 0.2),
-	light: transparent(listActiveSelectionForeground, 0.2),
-	hcDark: transparent(listActiveSelectionForeground, 0.2),
-	hcLight: transparent(listActiveSelectionForeground, 0.2)
-}, localize('scm.historyItemSelectedStatisticsBorder', "History item selected statistics border color."));
+registerColor('scm.historyItemSelectedStatisticsBorder', transparent(listActiveSelectionForeground, 0.2), localize('scm.historyItemSelectedStatisticsBorder', "History item selected statistics border color."));
 
 function processResourceFilterData(uri: URI, filterData: FuzzyScore | LabelFuzzyScore | undefined): [IMatch[] | undefined, IMatch[] | undefined] {
 	if (!filterData) {
@@ -1203,7 +1182,7 @@ class SeparatorRenderer implements ICompressibleTreeRenderer<SCMViewSeparatorEle
 		append(element, $('.separator'));
 		disposables.add(label);
 
-		if (this.configurationService.getValue<boolean>('scm.showHistoryGraph') !== true) {
+		if (this.configurationService.getValue<boolean>('scm.experimental.showHistoryGraph') !== true) {
 			const toolBar = new MenuWorkbenchToolBar(append(element, $('.actions')), MenuId.SCMChangesSeparator, { moreIcon: Codicon.gear }, this.menuService, this.contextKeyService, this.contextMenuService, this.keybindingService, this.commandService, this.telemetryService);
 			disposables.add(toolBar);
 		}
@@ -1609,7 +1588,7 @@ MenuRegistry.appendMenuItem(MenuId.SCMTitle, {
 MenuRegistry.appendMenuItem(MenuId.SCMTitle, {
 	title: localize('scmChanges', "Incoming & Outgoing"),
 	submenu: Menus.ChangesSettings,
-	when: ContextKeyExpr.and(ContextKeyExpr.equals('view', VIEW_PANE_ID), ContextKeys.RepositoryCount.notEqualsTo(0), ContextKeyExpr.equals('config.scm.showHistoryGraph', true).negate()),
+	when: ContextKeyExpr.and(ContextKeyExpr.equals('view', VIEW_PANE_ID), ContextKeys.RepositoryCount.notEqualsTo(0), ContextKeyExpr.equals('config.scm.experimental.showHistoryGraph', true).negate()),
 	group: '0_view&sort',
 	order: 2
 });
@@ -3017,7 +2996,7 @@ export class SCMViewPane extends ViewPane {
 							e.affectsConfiguration('scm.showChangesSummary') ||
 							e.affectsConfiguration('scm.showIncomingChanges') ||
 							e.affectsConfiguration('scm.showOutgoingChanges') ||
-							e.affectsConfiguration('scm.showHistoryGraph'),
+							e.affectsConfiguration('scm.experimental.showHistoryGraph'),
 						this.visibilityDisposables)
 						(() => this.updateChildren(), this, this.visibilityDisposables);
 
@@ -3109,9 +3088,7 @@ export class SCMViewPane extends ViewPane {
 				identityProvider: new SCMResourceIdentityProvider(),
 				sorter: new SCMTreeSorter(() => this.viewMode, () => this.viewSortKey),
 				keyboardNavigationLabelProvider: this.instantiationService.createInstance(SCMTreeKeyboardNavigationLabelProvider, () => this.viewMode),
-				overrideStyles: {
-					listBackground: this.viewDescriptorService.getViewLocationById(this.id) === ViewContainerLocation.Panel ? PANEL_BACKGROUND : SIDE_BAR_BACKGROUND
-				},
+				overrideStyles: this.getLocationBasedColors().listOverrideStyles,
 				collapseByDefault: (e: unknown) => {
 					// Repository, Resource Group, Resource Folder (Tree), History Item Change Folder (Tree)
 					if (isSCMRepository(e) || isSCMResourceGroup(e) || isSCMResourceNode(e) || isSCMHistoryItemChangeNode(e)) {
@@ -3229,7 +3206,13 @@ export class SCMViewPane extends ViewPane {
 			const historyItemChanges = await historyProvider?.provideHistoryItemChanges(historyItem.id, historyItemParentId);
 			if (historyItemChanges) {
 				const title = `${historyItem.id.substring(0, 8)} - ${historyItem.message}`;
-				await this.commandService.executeCommand('_workbench.openMultiDiffEditor', { title, resources: historyItemChanges });
+
+				const rootUri = e.element.repository.provider.rootUri;
+				const multiDiffSourceUri = rootUri ?
+					rootUri.with({ scheme: 'scm-history-item', path: `${rootUri.path}/${historyItem.id}` }) :
+					{ scheme: 'scm-history-item', path: `${e.element.repository.provider.label}/${historyItem.id}` };
+
+				await this.commandService.executeCommand('_workbench.openMultiDiffEditor', { title, multiDiffSourceUri, resources: historyItemChanges });
 			}
 
 			this.scmViewService.focus(e.element.repository);
@@ -3808,8 +3791,8 @@ class SCMTreeDataSource implements IAsyncDataSource<ISCMViewService, TreeElement
 			// History items
 			const historyItems = await this.getHistoryItems2(inputOrElement);
 			if (historyItems.length > 0) {
-				const label = localize('historySeparatorHeader', "History");
-				const ariaLabel = localize('historySeparatorHeaderAriaLabel', "History");
+				const label = localize('syncSeparatorHeader', "Incoming/Outgoing");
+				const ariaLabel = localize('syncSeparatorHeaderAriaLabel', "Incoming and outgoing changes");
 
 				children.push({ label, ariaLabel, repository: inputOrElement, type: 'separator' } satisfies SCMViewSeparatorElement);
 			}
@@ -4000,10 +3983,29 @@ class SCMTreeDataSource implements IAsyncDataSource<ISCMViewService, TreeElement
 			});
 		}
 
-		return toISCMHistoryItemViewModelArray(historyItemsElement)
-			.map(v => ({
+		// If we only have one history item that matches
+		// the current history item group, don't show it
+		if (historyItemsElement.length === 1 &&
+			historyItemsElement[0].labels?.find(l => l.title === currentHistoryItemGroup.name)) {
+			return [];
+		}
+
+		// Create the color map
+		// TODO@lszomoru - use theme colors
+		const colorMap = new Map<string, number>([
+			[currentHistoryItemGroup.name, 0]
+		]);
+		if (currentHistoryItemGroup.remote) {
+			colorMap.set(currentHistoryItemGroup.remote.name, 1);
+		}
+		if (currentHistoryItemGroup.base) {
+			colorMap.set(currentHistoryItemGroup.base.name, 2);
+		}
+
+		return toISCMHistoryItemViewModelArray(historyItemsElement, colorMap)
+			.map(historyItemViewModel => ({
 				repository: element,
-				historyItemViewModel: v,
+				historyItemViewModel,
 				type: 'historyItem2'
 			}) satisfies SCMHistoryItemViewModelTreeElement);
 	}
@@ -4113,7 +4115,7 @@ class SCMTreeDataSource implements IAsyncDataSource<ISCMViewService, TreeElement
 			showChangesSummary: this.configurationService.getValue<boolean>('scm.showChangesSummary'),
 			showIncomingChanges: this.configurationService.getValue<ShowChangesSetting>('scm.showIncomingChanges'),
 			showOutgoingChanges: this.configurationService.getValue<ShowChangesSetting>('scm.showOutgoingChanges'),
-			showHistoryGraph: this.configurationService.getValue<boolean>('scm.showHistoryGraph')
+			showHistoryGraph: this.configurationService.getValue<boolean>('scm.experimental.showHistoryGraph')
 		};
 	}
 
@@ -4241,3 +4243,31 @@ export class SCMActionButton implements IDisposable {
 		}
 	}
 }
+
+// Override styles in selections.ts
+registerThemingParticipant((theme, collector) => {
+	const selectionBackgroundColor = theme.getColor(selectionBackground);
+
+	if (selectionBackgroundColor) {
+		// Override inactive selection bg
+		const inputBackgroundColor = theme.getColor(inputBackground);
+		if (inputBackgroundColor) {
+			collector.addRule(`.scm-view .scm-editor-container .monaco-editor .selected-text { background-color: ${inputBackgroundColor.transparent(0.4)}; }`);
+		}
+
+		// Override selected fg
+		const inputForegroundColor = theme.getColor(inputForeground);
+		if (inputForegroundColor) {
+			collector.addRule(`.scm-view .scm-editor-container .monaco-editor .view-line span.inline-selected-text { color: ${inputForegroundColor}; }`);
+		}
+
+		const backgroundColor = theme.getColor(inputBackground);
+		if (backgroundColor) {
+			collector.addRule(`.scm-view .scm-editor-container .monaco-editor-background { background-color: ${backgroundColor}; } `);
+		}
+		collector.addRule(`.scm-view .scm-editor-container .monaco-editor .focused .selected-text { background-color: ${selectionBackgroundColor}; }`);
+	} else {
+		// Use editor selection color if theme has not set a selection background color
+		collector.addRule(`.scm-view .scm-editor-container .monaco-editor .focused .selected-text { background-color: ${theme.getColor(editorSelectionBackground)}; }`);
+	}
+});
