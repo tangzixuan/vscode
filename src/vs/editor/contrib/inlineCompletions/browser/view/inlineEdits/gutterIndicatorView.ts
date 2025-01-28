@@ -24,6 +24,7 @@ import { GutterIndicatorMenuContent } from './gutterIndicatorMenu.js';
 import { mapOutFalsy, n, rectToProps } from './utils.js';
 import { localize } from '../../../../../../nls.js';
 import { trackFocus } from '../../../../../../base/browser/dom.js';
+import { IAccessibilityService } from '../../../../../../platform/accessibility/common/accessibility.js';
 export const inlineEditIndicatorPrimaryForeground = registerColor(
 	'inlineEdit.gutterIndicator.primaryForeground',
 	buttonForeground,
@@ -73,10 +74,11 @@ export class InlineEditsGutterIndicator extends Disposable {
 		private readonly _editorObs: ObservableCodeEditor,
 		private readonly _originalRange: IObservable<LineRange | undefined>,
 		private readonly _model: IObservable<InlineCompletionsModel | undefined>,
-		private readonly _shouldShowHover: IObservable<boolean>,
+		private readonly _isHoveringOverInlineEdit: IObservable<boolean>,
 		private readonly _focusIsInMenu: ISettableObservable<boolean>,
 		@IHoverService private readonly _hoverService: HoverService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IAccessibilityService accessibilityService: IAccessibilityService,
 	) {
 		super();
 
@@ -88,10 +90,8 @@ export class InlineEditsGutterIndicator extends Disposable {
 		}));
 
 		this._register(autorun(reader => {
-			if (this._shouldShowHover.read(reader)) {
-				this._showHover();
-			} else {
-				this._hoverService.hideHover();
+			if (!accessibilityService.isMotionReduced()) {
+				this._indicator.element.classList.toggle('wiggle', this._isHoveringOverInlineEdit.read(reader));
 			}
 		}));
 	}

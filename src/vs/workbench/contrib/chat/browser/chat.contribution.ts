@@ -40,7 +40,7 @@ import { IVoiceChatService, VoiceChatService } from '../common/voiceChatService.
 import { EditsChatAccessibilityHelp, PanelChatAccessibilityHelp, QuickChatAccessibilityHelp } from './actions/chatAccessibilityHelp.js';
 import { ChatCommandCenterRendering, registerChatActions } from './actions/chatActions.js';
 import { ACTION_ID_NEW_CHAT, registerNewChatActions } from './actions/chatClearActions.js';
-import { registerChatCodeBlockActions, registerChatCodeCompareBlockActions } from './actions/chatCodeblockActions.js';
+import { CodeBlockActionRendering, registerChatCodeBlockActions, registerChatCodeCompareBlockActions } from './actions/chatCodeblockActions.js';
 import { registerChatContextActions } from './actions/chatContextActions.js';
 import { registerChatCopyActions } from './actions/chatCopyActions.js';
 import { registerChatDeveloperActions } from './actions/chatDeveloperActions.js';
@@ -81,6 +81,8 @@ import { ChatRelatedFilesContribution } from './contrib/chatInputRelatedFilesCon
 import { ChatQuotasService, ChatQuotasStatusBarEntry, IChatQuotasService } from './chatQuotasService.js';
 import { BuiltinToolsContribution } from './tools/tools.js';
 import { ChatSetupContribution } from './chatSetup.js';
+import { ChatEditorOverlayController } from './chatEditorOverlay.js';
+import '../common/promptSyntax/languageFeatures/promptLinkProvider.js';
 
 // Register configuration
 const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
@@ -310,6 +312,7 @@ registerWorkbenchContribution2(ChatExtensionPointHandler.ID, ChatExtensionPointH
 registerWorkbenchContribution2(LanguageModelToolsExtensionPointHandler.ID, LanguageModelToolsExtensionPointHandler, WorkbenchPhase.BlockRestore);
 registerWorkbenchContribution2(ChatCompatibilityNotifier.ID, ChatCompatibilityNotifier, WorkbenchPhase.Eventually);
 registerWorkbenchContribution2(ChatCommandCenterRendering.ID, ChatCommandCenterRendering, WorkbenchPhase.BlockRestore);
+registerWorkbenchContribution2(CodeBlockActionRendering.ID, CodeBlockActionRendering, WorkbenchPhase.BlockRestore);
 registerWorkbenchContribution2(ChatImplicitContextContribution.ID, ChatImplicitContextContribution, WorkbenchPhase.Eventually);
 registerWorkbenchContribution2(ChatRelatedFilesContribution.ID, ChatRelatedFilesContribution, WorkbenchPhase.Eventually);
 registerWorkbenchContribution2(ChatViewsWelcomeHandler.ID, ChatViewsWelcomeHandler, WorkbenchPhase.BlockStartup);
@@ -334,6 +337,7 @@ registerChatDeveloperActions();
 registerChatEditorActions();
 
 registerEditorFeature(ChatPasteProvidersFeature);
+registerEditorContribution(ChatEditorOverlayController.ID, ChatEditorOverlayController, EditorContributionInstantiation.Lazy);
 registerEditorContribution(ChatEditorController.ID, ChatEditorController, EditorContributionInstantiation.Eventually);
 
 registerSingleton(IChatService, ChatService, InstantiationType.Delayed);

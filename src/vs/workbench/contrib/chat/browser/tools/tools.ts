@@ -5,13 +5,14 @@
 
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
+import { Disposable, IDisposable } from '../../../../../base/common/lifecycle.js';
 import { autorun } from '../../../../../base/common/observable.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { localize } from '../../../../../nls.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { IWorkbenchContribution } from '../../../../common/contributions.js';
+import { SaveReason } from '../../../../common/editor.js';
 import { ITextFileService } from '../../../../services/textfile/common/textfiles.js';
 import { ICodeMapperService } from '../../common/chatCodeMapperService.js';
 import { IChatEditingService } from '../../common/chatEditingService.js';
@@ -149,18 +150,32 @@ class EditTool implements IToolImpl {
 			throw new Error(result.errorMessage);
 		}
 
+		let dispose: IDisposable;
 		await new Promise((resolve) => {
-			autorun((r) => {
+			// The file will not be modified until the first edits start streaming in,
+			// so wait until we see that it _was_ modified before waiting for it to be done.
+			let wasFileBeingModified = false;
+
+			dispose = autorun((r) => {
 				const currentEditingSession = this.chatEditingService.currentEditingSessionObs.read(r);
 				const entries = currentEditingSession?.entries.read(r);
 				const currentFile = entries?.find((e) => e.modifiedURI.toString() === uri.toString());
-				if (currentFile && !currentFile.isCurrentlyBeingModified.read(r)) {
-					resolve(true);
+				if (currentFile) {
+					if (currentFile.isCurrentlyBeingModified.read(r)) {
+						wasFileBeingModified = true;
+					} else if (wasFileBeingModified) {
+						resolve(true);
+					}
 				}
 			});
+		}).finally(() => {
+			dispose.dispose();
 		});
 
-		await this.textFileService.save(uri);
+		await this.textFileService.save(uri, {
+			reason: SaveReason.AUTO,
+			skipSaveParticipants: true,
+		});
 
 		return {
 			content: [{ kind: 'text', value: 'The file was edited successfully' }]
