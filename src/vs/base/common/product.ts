@@ -5,6 +5,7 @@
 
 import { IStringDictionary } from './collections.js';
 import { PlatformName } from './platform.js';
+import { IPolicy } from './policy.js';
 
 export interface IBuiltInExtension {
 	readonly name: string;
@@ -99,6 +100,7 @@ export interface IProductConfiguration {
 		readonly extensionUrlTemplate: string;
 		readonly resourceUrlTemplate: string;
 		readonly nlsBaseUrl: string;
+		readonly accessSKUs?: string[];
 	};
 
 	readonly extensionPublisherOrgs?: readonly string[];
@@ -182,6 +184,17 @@ export interface IProductConfiguration {
 	readonly msftInternalDomains?: string[];
 	readonly linkProtectionTrustedDomains?: readonly string[];
 
+	readonly defaultAccount?: {
+		readonly authenticationProvider: {
+			readonly id: string;
+			readonly enterpriseProviderId: string;
+			readonly enterpriseProviderConfig: string;
+			readonly scopes: string[];
+		};
+		readonly tokenEntitlementUrl: string;
+		readonly chatEntitlementUrl: string;
+	};
+
 	readonly 'configurationSync.store'?: ConfigurationSyncStore;
 
 	readonly 'editSessions.store'?: Omit<ConfigurationSyncStore, 'insidersUrl' | 'stableUrl'>;
@@ -196,6 +209,10 @@ export interface IProductConfiguration {
 	readonly chatParticipantRegistry?: string;
 
 	readonly emergencyAlertUrl?: string;
+
+	readonly remoteDefaultExtensionsIfInstalledLocally?: string[];
+
+	readonly extensionConfigurationPolicy?: IStringDictionary<IPolicy>;
 }
 
 export interface ITunnelApplicationConfig {
