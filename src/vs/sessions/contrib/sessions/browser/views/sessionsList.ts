@@ -552,10 +552,8 @@ class SessionItemRenderer implements ITreeRenderer<SessionListItem, FuzzyScore, 
 			const isQuickChat = element.isQuickChat?.read(reader) ?? false;
 			const completedStateIcon = gitHubInfo?.pullRequest?.icon;
 
-			// The status icon (spinner vs. codicon, cross-fade, reduced-motion) is fully
-			// owned by the SessionStatusIcon widget; here we just feed it the latest state.
-			// Row recycling re-feeds the widget, which cross-fades to the new session's icon.
-			template.statusIcon.setStatus(sessionStatus, isRead, isArchived, completedStateIcon);
+			// The status icon widget snaps on row recycling and cross-fades real state changes.
+			template.statusIcon.setStatus(sessionStatus, isRead, isArchived, completedStateIcon, element.resource);
 			// The title shimmer (toggled by the `in-progress` class) is phase-aligned
 			// across rows via an `animationstart` handler on the title element, so no
 			// per-state work is needed here.
